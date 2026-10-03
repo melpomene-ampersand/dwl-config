@@ -1,0 +1,139 @@
+--- dwl.c
++++ dwl.c
+@@ -814,7 +815,7 @@ closemon(Monitor *m)
+ 		if (c->mon == m)
+ 			setmon(c, selmon, c->tags);
+ 	}
+-	focusclient(focustop(selmon), 1);
++	focusclient(focustop(selmon, 0), 1);
+ 	printstatus();
+ }
+ 
+@@ -1251,7 +1252,7 @@ void
+ destroydragicon(struct wl_listener *listener, void *data)
+ {
+ 	/* Focus enter isn't sent during drag, so refocus the focused node. */
+-	focusclient(focustop(selmon), 1);
++	focusclient(focustop(selmon, 0), 1);
+ 	motionnotify(0, NULL, 0, 0, 0, 0);
+ 	wl_list_remove(&listener->link);
+ 	free(listener);
+@@ -1290,7 +1291,7 @@ destroylock(SessionLock *lock, int unlock)
+ 
+ 	wlr_scene_node_set_enabled(&locked_bg->node, 0);
+ 
+-	focusclient(focustop(selmon), 0);
++	focusclient(focustop(selmon, 0), 0);
+ 	motionnotify(0, NULL, 0, 0, 0, 0);
+ 
+ destroy:
+@@ -1319,7 +1320,7 @@ destroylocksurface(struct wl_listener *listener, void *data)
+ 		surface = wl_container_of(cur_lock->surfaces.next, surface, link);
+ 		client_notify_enter(surface->surface, wlr_seat_get_keyboard(seat));
+ 	} else if (!locked) {
+-		focusclient(focustop(selmon), 1);
++		focusclient(focustop(selmon, 0), 1);
+ 	} else {
+ 		wlr_seat_keyboard_clear_focus(seat);
+ 	}
+@@ -1484,14 +1486,14 @@ focusmon(const Arg *arg)
+ 			selmon = dirtomon(arg->i);
+ 		while (!selmon->wlr_output->enabled && i++ < nmons);
+ 	}
+-	focusclient(focustop(selmon), 1);
++	focusclient(focustop(selmon, 0), 1);
+ }
+ 
+ void
+ focusstack(const Arg *arg)
+ {
+ 	/* Focus the next or previous client (in tiling order) on selmon */
+-	Client *c, *sel = focustop(selmon);
++	Client *c, *sel = focustop(selmon, 0);
+ 	if (!sel || (sel->isfullscreen && !client_has_children(sel)))
+ 		return;
+ 	if (arg->i > 0) {
+@@ -2440,7 +2463,7 @@ setmon(Client *c, Monitor *m, uint32_t newtags)
+ 		setfullscreen(c, c->isfullscreen); /* This will call arrange(c->mon) */
+ 		setfloating(c, c->isfloating);
+ 	}
+-	focusclient(focustop(selmon), 1);
++	focusclient(focustop(selmon, 0), 1);
+ }
+ 
+ void
+@@ -2714,12 +2737,12 @@ startdrag(struct wl_listener *listener, void *data)
+ void
+ tag(const Arg *arg)
+ {
+-	Client *sel = focustop(selmon);
++	Client *sel = focustop(selmon, 0);
+ 	if (!sel || (arg->ui & TAGMASK) == 0)
+ 		return;
+ 
+ 	sel->tags = arg->ui & TAGMASK;
+-	focusclient(focustop(selmon), 1);
++	focusclient(focustop(selmon, 0), 1);
+ 	arrange(selmon);
+ 	printstatus();
+ }
+@@ -2787,12 +2810,12 @@ void
+ toggletag(const Arg *arg)
+ {
+ 	uint32_t newtags;
+-	Client *sel = focustop(selmon);
++	Client *sel = focustop(selmon, 0);
+ 	if (!sel || !(newtags = sel->tags ^ (arg->ui & TAGMASK)))
+ 		return;
+ 
+ 	sel->tags = newtags;
+-	focusclient(focustop(selmon), 1);
++	focusclient(focustop(selmon, 0), 1);
+ 	arrange(selmon);
+ 	printstatus();
+ }
+@@ -2805,7 +2828,7 @@ toggleview(const Arg *arg)
+ 		return;
+ 
+ 	selmon->tagset[selmon->seltags] = newtagset;
+-	focusclient(focustop(selmon), 1);
++	focusclient(focustop(selmon, 0), 1);
+ 	arrange(selmon);
+ 	printstatus();
+ }
+@@ -2829,7 +2852,7 @@ unmaplayersurfacenotify(struct wl_listener *listener, void *data)
+ 	if (l->layer_surface->output && (l->mon = l->layer_surface->output->data))
+ 		arrangelayers(l->mon);
+ 	if (l->layer_surface->surface == seat->keyboard_state.focused_surface)
+-		focusclient(focustop(selmon), 1);
++		focusclient(focustop(selmon, 0), 1);
+ 	motionnotify(0, NULL, 0, 0, 0, 0);
+ }
+ 
+@@ -2846,7 +2869,7 @@ unmapnotify(struct wl_listener *listener, void *data)
+ 	if (client_is_unmanaged(c)) {
+ 		if (c == exclusive_focus) {
+ 			exclusive_focus = NULL;
+-			focusclient(focustop(selmon), 1);
++			focusclient(focustop(selmon, 0), 1);
+ 		}
+ 	} else {
+ 		wl_list_remove(&c->link);
+@@ -2947,7 +2970,7 @@ updatemons(struct wl_listener *listener, void *data)
+ 			if (!c->mon && client_surface(c)->mapped)
+ 				setmon(c, selmon, c->tags);
+ 		}
+-		focusclient(focustop(selmon), 1);
++		focusclient(focustop(selmon, 0), 1);
+ 		if (selmon->lock_surface) {
+ 			client_notify_enter(selmon->lock_surface->surface,
+ 					wlr_seat_get_keyboard(seat));
+@@ -2997,7 +3020,7 @@ view(const Arg *arg)
+ 	selmon->seltags ^= 1; /* toggle sel tagset */
+ 	if (arg->ui & TAGMASK)
+ 		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
+-	focusclient(focustop(selmon), 1);
++	focusclient(focustop(selmon, 0), 1);
+ 	arrange(selmon);
+ 	printstatus();
+ }
