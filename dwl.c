@@ -250,6 +250,8 @@ typedef struct {
 	uint32_t tags;
 	int isfloating;
 	int monitor;
+  int w;
+  int h;
 } Rule;
 
 typedef struct {
@@ -519,10 +521,10 @@ applybounds(Client *c, struct wlr_box *bbox)
 		c->geom.y = bbox->y;
 }
 
-void
+/*void
 applyrules(Client *c)
 {
-	/* rule matching */
+	
 	const char *appid, *title;
 	uint32_t newtags = 0;
 	int i;
@@ -547,7 +549,52 @@ applyrules(Client *c)
 
 	c->isfloating |= client_is_float_type(c);
 	setmon(c, mon, newtags);
+}*/
+
+
+void
+applyrules(Client *c)
+{
+	/* rule matching */
+	const char *appid, *title;
+	uint32_t newtags = 0;
+	int i;
+	const Rule *r;
+	Monitor *mon = selmon, *m;
+
+	appid = client_get_appid(c);
+	title = client_get_title(c);
+
+	for (r = rules; r < END(rules); r++) {
+		if ((!r->title || strstr(title, r->title))
+				&& (!r->id || strstr(appid, r->id))) {
+			c->isfloating = r->isfloating;
+			newtags |= r->tags;
+			i = 0;
+			wl_list_for_each(m, &mons, link) {
+				if (r->monitor == i++)
+					mon = m;
+			}
+
+			/* Custom Window Sizing and Centering Patch */
+			if (c->isfloating && r->w > 0 && r->h > 0) {
+				Monitor *target_mon = mon ? mon : selmon;
+				
+				// Set custom window proportions 
+				c->geom.width = r->w;
+				c->geom.height = r->h;
+				
+				// Center position math accounting for monitor offsets and workspace area (m->w)
+				c->geom.x = target_mon->w.x + (target_mon->w.width - c->geom.width) / 2;
+				c->geom.y = target_mon->w.y + (target_mon->w.height - c->geom.height) / 2;
+			}
+		}
+	}
+
+	c->isfloating |= client_is_float_type(c);
+	setmon(c, mon, newtags);
 }
+
 
 void
 arrange(Monitor *m)
