@@ -3088,8 +3088,12 @@ tagmon(const Arg *arg)
 void
 tabletapplymap(double x, double y, struct wlr_input_device *dev)
 {
-	Client *p;
+	Client *p = NULL;
 	struct wlr_box geom = {0};
+
+	/* Always clear any previous region mapping so it can't go stale */
+	wlr_cursor_map_input_to_region(cursor, dev, NULL);
+
 	if (tabletmaptosurface && tablet_curr_surface) {
 		toplevel_from_wlr_surface(tablet_curr_surface, &p, NULL);
 		if (p) {
@@ -3103,6 +3107,7 @@ tabletapplymap(double x, double y, struct wlr_input_device *dev)
 	}
 	wlr_cursor_map_input_to_output(cursor, dev, selmon->wlr_output);
 }
+
 
 void
 tabletpadbutton(struct wl_listener *listener, void *data)
